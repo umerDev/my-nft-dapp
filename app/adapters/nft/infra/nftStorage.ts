@@ -2,7 +2,7 @@ import { NFTStorage } from 'nft.storage';
 import { NFTMetadata } from '../../../core/nft/entities/NFTMetadata';
 
 const client = new NFTStorage({
-  token: process.env.NEXT_PUBLIC_NFT_STORAGE_KEY!,
+  token: process.env.NFT_STORAGE_KEY!,
 });
 
 export async function uploadToIPFS(metadata: NFTMetadata): Promise<string> {

@@ -45,7 +45,7 @@ npm install
 ```bash
 NEXT_PUBLIC_CONTRACT_ADDRESS=your_contract_address
 NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=your_walletconnect_id
-NEXT_PUBLIC_NFT_STORAGE_KEY=your_nft_storage_key
+NFT_STORAGE_KEY=your_nft_storage_key
 ```
 
 3. Run the development server:
