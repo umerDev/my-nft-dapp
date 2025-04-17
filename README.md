@@ -2,6 +2,13 @@
 
 A Next.js-based NFT minting application that allows users to connect their wallets and mint NFTs on the Sepolia testnet.
 
+## Smart Contract Reference
+
+This dapp uses a custom ERC-721 contract for minting NFTs. You can view the contract source code here:
+
+- [umerDev/erc721-nft-contract](https://github.com/umerDev/erc721-nft-contract)
+
+
 ## Project Architecture
 
 The project follows a clean architecture pattern with the following structure:
@@ -23,6 +30,14 @@ app/
 - **Features**: Feature-specific components and hooks
 - **Lib**: Shared libraries and configurations
 - **Shared**: Reusable components and utilities
+
+## NFT Minting Flow
+
+- User uploads an image and metadata via the dapp UI.
+- The image and metadata are uploaded to IPFS via a server API route.
+- Once IPFS upload is complete, the dapp mints the NFT **client-side** using the connected wallet (RainbowKit/Wagmi/Viem), directly from the browser.
+- The transaction is signed and sent by the user's wallet; the backend never handles private keys or executes blockchain transactions.
+
 
 ## Tech Stack
 
@@ -59,8 +74,8 @@ npm run dev
 ## Features
 
 - Wallet connection using RainbowKit
-- NFT minting on Sepolia testnet
-- IPFS metadata storage
+- NFT minting on Sepolia testnet (client-side, with user wallet)
+- IPFS metadata storage (via server API)
 - Responsive UI with Tailwind CSS
 
 ## Development
