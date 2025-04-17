@@ -1,10 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { mintRepository } from '@/adapters/nft/web3/nftContract';
+import { useEffect, useState } from 'react';
+import { useAccount, useWaitForTransactionReceipt } from 'wagmi';
+import { Hash } from 'viem';
+import { getNFTContract } from '@/lib/contracts';
+import { useWalletClient } from 'wagmi';
 
 export const NFTForm = () => {
+  const { data: walletClient } = useWalletClient();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -34,7 +37,7 @@ export const NFTForm = () => {
     name: string,
     description: string,
     walletAddress: string
-  ): Promise<{ success: boolean, message: string, tokenURI: string }> => {
+  ): Promise<{ success: boolean; message: string; tokenURI: string }> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('name', name);
@@ -53,77 +56,63 @@ export const NFTForm = () => {
 
     return await response.json();
   };
-  
+
   // Contract interaction for minting
-  const { writeContract, data: mintTxHash, isPending: isMinting, isSuccess: isMintSuccess, error: mintError } = useWriteContract();
-  
+  // Mint transaction state
+  const [mintTxHash, setMintTxHash] = useState<string | undefined>(undefined);
+  const [isMinting, setIsMinting] = useState(false);
+
   // Wait for transaction
   const { isLoading: isWaiting, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-    hash: mintTxHash,
+    hash: mintTxHash as Hash,
   });
-  
+
+  const getButtonText = () => {
+    if (isLoading) return 'Uploading to IPFS...';
+    if (isMinting) return 'Initiating transaction...';
+    if (isWaiting) return 'Confirming transaction...';
+    return 'Mint NFT';
+  };
+
   // Handle successful transaction confirmation
-  if (isConfirmed) {
-    // Only run this once when confirmation changes to true
-    if (!success || !success.includes('confirmed')) {
+  useEffect(() => {
+    if (isConfirmed && (!success || !success.includes('confirmed'))) {
       setSuccess('NFT minted successfully! Transaction confirmed on the blockchain.');
       setIsLoading(false);
     }
-  }
+  }, [isConfirmed]);
 
   // Main form submission handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsLoading(true);
     setError(null);
     setSuccess(null);
+    setIsMinting(false);
+    setMintTxHash(undefined);
 
     try {
-      if (!address) {
-        throw new Error('Wallet address not available');
-      }
+      if (!address) throw new Error('Wallet address not available');
 
       // Step 1: Upload to IPFS and get tokenURI
       const result = await uploadToIPFS(file!, name, description, address);
-      
-      // Step 2: Mint the NFT on the blockchain using the tokenURI
-      // We can either use the mintRepository directly or use the Wagmi hooks
-      // Using Wagmi hooks gives us better UI feedback and transaction handling
-      writeContract({
-        address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
-        abi: [
-          {
-            inputs: [
-              { internalType: 'address', name: 'to', type: 'address' },
-              { internalType: 'string', name: 'uri', type: 'string' },
-            ],
-            name: 'mintNFT',
-            outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
-            stateMutability: 'nonpayable',
-            type: 'function',
-          },
-        ],
-        functionName: 'mintNFT',
-        args: [address as `0x${string}`, result.tokenURI],
-      });
-      
-      // Alternative approach using the repository directly:
-      // try {
-      //   await mintRepository.mint(address, result.tokenURI);
-      // } catch (error) {
-      //   console.error('Error minting:', error);
-      //   throw error;
-      // }
-      
-      setSuccess(`Metadata uploaded to IPFS. Minting transaction initiated...`);
+
+      // Step 2: Mint the NFT using the mintRepository abstraction
+      setIsMinting(true);
+      // Mint directly using viem contract call with dynamic wallet client
+      if (!walletClient) throw new Error('Wallet client not connected');
+      const contract = getNFTContract(walletClient);
+      const txHash = await contract.write.mintNFT([address, result.tokenURI], { account: address });
+      setMintTxHash(txHash);
+      setSuccess('Metadata uploaded to IPFS. Minting transaction initiated...');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
       setIsLoading(false);
+      setIsMinting(false);
     }
   };
 
@@ -166,11 +155,12 @@ export const NFTForm = () => {
           className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 file:mr-4 file:rounded-md file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
       </div>
-      <button type="submit" disabled={isLoading || isMinting || isWaiting} className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400">
-        {isLoading ? 'Uploading to IPFS...' : 
-         isMinting ? 'Initiating transaction...' : 
-         isWaiting ? 'Confirming transaction...' : 
-         'Mint NFT'}
+      <button
+        type="submit"
+        disabled={isLoading || isMinting || isWaiting}
+        className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+      >
+        {getButtonText()}
       </button>
       {error && <div className="rounded-md bg-red-100 p-3 text-sm text-red-700">{error}</div>}
       {success && (

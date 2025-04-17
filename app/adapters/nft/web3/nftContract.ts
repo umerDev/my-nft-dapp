@@ -11,8 +11,9 @@ export const mintRepository: MintRepository = {
   async mint(to: string, tokenURI: string) {
     try {
       const contract = await getNFTContract();
-      const hash = await contract.write.mintNFT([to, tokenURI]);
-      await waitForTransactionReceipt(walletClient, { hash });
+      const hash = await contract.write.mintNFT([to, tokenURI], { account: to });
+      const receipt = await waitForTransactionReceipt(walletClient, { hash });
+      return receipt.transactionHash;
     } catch (error) {
       console.error('Failed to mint NFT:', error);
       throw new Error('Failed to mint NFT');

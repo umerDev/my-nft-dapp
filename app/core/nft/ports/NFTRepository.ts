@@ -11,7 +11,7 @@ export interface IPFSRepository {
  * Interface for blockchain minting operations (client-side)
  */
 export interface MintRepository {
-  mint(to: string, tokenURI: string): Promise<void>;
+  mint(to: string, tokenURI: string): Promise<string>;
 }
 
 /**
