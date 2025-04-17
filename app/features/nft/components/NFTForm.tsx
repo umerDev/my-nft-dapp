@@ -5,6 +5,7 @@ import { useAccount, useWaitForTransactionReceipt } from 'wagmi';
 import { Hash } from 'viem';
 import { getNFTContract } from '@/lib/contracts';
 import { useWalletClient } from 'wagmi';
+import Link from 'next/link';
 
 export const NFTForm = () => {
   const { data: walletClient } = useWalletClient();
@@ -163,8 +164,16 @@ export const NFTForm = () => {
         {getButtonText()}
       </button>
       {error && <div className="rounded-md bg-red-100 p-3 text-sm text-red-700">{error}</div>}
-      {success && (
-        <div className="rounded-md bg-green-100 p-3 text-sm text-green-700">{success}</div>
+      {success && mintTxHash && (
+        <>
+          <div className="rounded-md bg-green-100 p-3 text-sm text-green-700">{success}</div>
+          <Link
+            href={`https://sepolia.etherscan.io/tx/${mintTxHash}`}
+            className="text-blue-500 hover:underline"
+          >
+            View on etherscan
+          </Link>
+        </>
       )}
     </form>
   );
