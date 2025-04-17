@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
-import { nftRepository } from '@/adapters/nft/web3/nftContract';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 
 export const NFTForm = () => {
   const [name, setName] = useState('');
@@ -28,31 +27,48 @@ export const NFTForm = () => {
     return true;
   };
 
-  // Upload file to IPFS
+  // Upload to IPFS and get tokenURI
   const uploadToIPFS = async (
     file: File,
     name: string,
-    description: string
-  ): Promise<{ ipfsHash: string }> => {
+    description: string,
+    walletAddress: string
+  ): Promise<{ success: boolean, message: string, tokenURI: string }> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('name', name);
     formData.append('description', description);
+    formData.append('address', walletAddress);
 
-    const response = await fetch('/api/nft-storage', {
+    const response = await fetch('/api/mint-nft', {
       method: 'POST',
       body: formData,
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to store NFT');
+      throw new Error(error.error || 'Failed to upload to IPFS');
     }
 
-    const data = await response.json();
-    console.log('api response ', data);
-    return { ipfsHash: data.metadata.IpfsHash };
+    return await response.json();
   };
+  
+  // Contract interaction for minting
+  const { writeContract, data: mintTxHash, isPending: isMinting, isSuccess: isMintSuccess, error: mintError } = useWriteContract();
+  
+  // Wait for transaction
+  const { isLoading: isWaiting, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash: mintTxHash,
+  });
+  
+  // Handle successful transaction confirmation
+  if (isConfirmed) {
+    // Only run this once when confirmation changes to true
+    if (!success || !success.includes('confirmed')) {
+      setSuccess('NFT minted successfully! Transaction confirmed on the blockchain.');
+      setIsLoading(false);
+    }
+  }
 
   // Main form submission handler
   const handleSubmit = async (e: React.FormEvent) => {
@@ -67,20 +83,35 @@ export const NFTForm = () => {
     setSuccess(null);
 
     try {
-      const { ipfsHash } = await uploadToIPFS(file!, name, description);
-
       if (!address) {
         throw new Error('Wallet address not available');
       }
 
-      const tokenURI = `ipfs://${ipfsHash}`;
-
-      await nftRepository.mint(address, tokenURI);
-
-      setSuccess(`NFT minted successfully with IPFS hash: ${ipfsHash}`);
+      // Step 1: Upload to IPFS and get tokenURI
+      const result = await uploadToIPFS(file!, name, description, address);
+      
+      // Step 2: Mint the NFT on the blockchain using the tokenURI
+      writeContract({
+        address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
+        abi: [
+          {
+            inputs: [
+              { internalType: 'address', name: 'to', type: 'address' },
+              { internalType: 'string', name: 'uri', type: 'string' },
+            ],
+            name: 'mintNFT',
+            outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+            stateMutability: 'nonpayable',
+            type: 'function',
+          },
+        ],
+        functionName: 'mintNFT',
+        args: [address as `0x${string}`, result.tokenURI],
+      });
+      
+      setSuccess(`Metadata uploaded to IPFS. Minting transaction initiated...`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -124,12 +155,11 @@ export const NFTForm = () => {
           className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 file:mr-4 file:rounded-md file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-blue-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
       </div>
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isLoading ? 'Storing...' : 'Store NFT'}
+      <button type="submit" disabled={isLoading || isMinting || isWaiting} className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400">
+        {isLoading ? 'Uploading to IPFS...' : 
+         isMinting ? 'Initiating transaction...' : 
+         isWaiting ? 'Confirming transaction...' : 
+         'Mint NFT'}
       </button>
       {error && <div className="rounded-md bg-red-100 p-3 text-sm text-red-700">{error}</div>}
       {success && (
