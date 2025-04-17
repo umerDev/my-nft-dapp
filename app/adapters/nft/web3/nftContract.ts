@@ -1,9 +1,9 @@
-import { NFTRepository } from '@/app/core/nft/ports/NFTRepository';
-import { uploadToIPFS } from '../infra/nftStorage';
-import { NFTMetadata } from '@/app/core/nft/entities/NFTMetadata';
-import { walletClient } from '@/app/lib/clients';
-import { getNFTContract } from '@/app/lib/contracts';
+import { NFTMetadata } from '@/core/nft/entities/NFTMetadata';
+import { NFTRepository } from '@/core/nft/ports/NFTRepository';
+import { walletClient } from '@/lib/clients';
+import { getNFTContract } from '@/lib/contracts';
 import { waitForTransactionReceipt } from 'viem/actions';
+import { uploadToIPFS } from '../infra/nftStorage';
 
 export const nftRepository: NFTRepository = {
   async uploadToIPFS(metadata: NFTMetadata) {
