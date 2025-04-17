@@ -1,7 +1,8 @@
+'use client';
+
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
-import { sepolia } from 'viem/chains';
+import { sepolia } from 'wagmi/chains';
 import { http } from 'viem';
-import { storage } from '../utils/storage';
 
 export const wagmiConfig = getDefaultConfig({
   appName: 'my-nft-dapp',
@@ -11,5 +12,4 @@ export const wagmiConfig = getDefaultConfig({
     [sepolia.id]: http(),
   },
   ssr: true,
-  storage,
 });
