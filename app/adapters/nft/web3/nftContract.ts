@@ -3,16 +3,12 @@ import { NFTRepository } from '@/core/nft/ports/NFTRepository';
 import { walletClient } from '@/lib/clients';
 import { getNFTContract } from '@/lib/contracts';
 import { waitForTransactionReceipt } from 'viem/actions';
-import { uploadToIPFS } from '../infra/nftStorage';
 
 export const nftRepository: NFTRepository = {
-  async uploadToIPFS(metadata: NFTMetadata) {
-    try {
-      return await uploadToIPFS(metadata);
-    } catch (error) {
-      console.error('Failed to upload to IPFS:', error);
-      throw new Error('Failed to upload metadata to IPFS');
-    }
+  async uploadToIPFS(metadata: NFTMetadata): Promise<string> {
+    // This is a client-side implementation, so we can't actually upload to IPFS here
+    // Instead, we'll throw an error suggesting to use the server-side implementation
+    throw new Error('Client-side IPFS upload is not supported. Use the server-side API instead.');
   },
 
   async mint(to: string, tokenURI: string) {
