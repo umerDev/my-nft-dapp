@@ -46,6 +46,8 @@ export async function POST(request: Request) {
 
     const metadataResponse = await pinata.pinJSONToIPFS(metadata);
 
+    console.log(metadataResponse);
+
     return NextResponse.json({
       metadata: {
         ...metadataResponse,
