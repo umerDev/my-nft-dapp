@@ -1,5 +1,5 @@
 import { NFTStorage } from 'nft.storage';
-import { NFTMetadata } from '../entities/NFTMetadata';
+import { NFTMetadata } from '../../../core/nft/entities/NFTMetadata';
 
 const client = new NFTStorage({
   token: process.env.NEXT_PUBLIC_NFT_STORAGE_KEY!,
