@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAccount } from 'wagmi';
+import { nftRepository } from '@/adapters/nft/web3/nftContract';
 
 export const NFTForm = () => {
   const [name, setName] = useState('');
@@ -12,15 +13,52 @@ export const NFTForm = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const { address } = useAccount();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Validate form inputs
+  const validateForm = (): boolean => {
     if (!address) {
       setError('Please connect your wallet first');
-      return;
+      return false;
     }
 
     if (!file || !name || !description) {
       setError('Please fill in all fields');
+      return false;
+    }
+
+    return true;
+  };
+
+  // Upload file to IPFS
+  const uploadToIPFS = async (
+    file: File,
+    name: string,
+    description: string
+  ): Promise<{ ipfsHash: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('name', name);
+    formData.append('description', description);
+
+    const response = await fetch('/api/nft-storage', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to store NFT');
+    }
+
+    const data = await response.json();
+    console.log('api response ', data);
+    return { ipfsHash: data.metadata.IpfsHash };
+  };
+
+  // Main form submission handler
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
       return;
     }
 
@@ -29,24 +67,17 @@ export const NFTForm = () => {
     setSuccess(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('name', name);
-      formData.append('description', description);
+      const { ipfsHash } = await uploadToIPFS(file!, name, description);
 
-      const response = await fetch('/api/nft-storage', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to store NFT');
+      if (!address) {
+        throw new Error('Wallet address not available');
       }
 
-      const data = await response.json();
-      setSuccess('NFT stored successfully!');
-      console.log('NFT metadata:', data.metadata);
+      const tokenURI = `ipfs://${ipfsHash}`;
+
+      await nftRepository.mint(address, tokenURI);
+
+      setSuccess(`NFT minted successfully with IPFS hash: ${ipfsHash}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {

@@ -49,6 +49,7 @@ export async function POST(request: Request) {
     console.log(metadataResponse);
 
     return NextResponse.json({
+      success: true,
       metadata: {
         ...metadataResponse,
         imageHash: imageResponse.IpfsHash,
