@@ -1,4 +1,4 @@
-import { NFTRepository } from '@/core/nft/ports/NFTRepository';
+import { IPFSRepository } from '@/core/nft/ports/NFTRepository';
 import { NFTMetadata } from '@/core/nft/entities/NFTMetadata';
 import pinataSDK from '@pinata/sdk';
 import { writeFile, unlink } from 'fs/promises';
@@ -11,10 +11,10 @@ import crypto from 'crypto';
 const pinata = new pinataSDK(process.env.PINATA_API_KEY!, process.env.PINATA_SECRET_API_KEY!);
 
 /**
- * Server-side implementation of the NFTRepository
- * This handles IPFS uploads but delegates actual minting to the client
+ * Server-side implementation of the IPFSRepository
+ * This handles IPFS uploads only, with minting handled on the client
  */
-export const serverNftRepository: NFTRepository = {
+export const serverNftRepository: IPFSRepository = {
   async uploadToIPFS(metadata: NFTMetadata): Promise<string> {
     try {
       // Convert the File to a Buffer for Pinata
@@ -56,13 +56,5 @@ export const serverNftRepository: NFTRepository = {
       console.error('Failed to upload to IPFS:', error);
       throw new Error('Failed to upload to IPFS');
     }
-  },
-
-  async mint(to: string, tokenURI: string): Promise<void> {
-    // Server-side minting is not implemented
-    // This would require a private key which is not secure to store on the server
-    // Instead, we'll return the tokenURI and let the client handle the minting
-    console.log(`Server would mint NFT to ${to} with URI ${tokenURI}`);
-    throw new Error('Server-side minting is not implemented. Use client-side minting instead.');
   }
 };

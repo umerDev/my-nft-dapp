@@ -29,9 +29,8 @@ export async function POST(request: Request) {
         image: file, // Pass the file object directly
       };
 
-      // Use the mintNFT service with the server repository for IPFS upload
-      // Note: The server repository can only handle IPFS uploads, not actual minting
-      // The client will need to handle the actual blockchain transaction
+      // Use the server repository for IPFS upload only
+      // The client will handle the actual blockchain transaction
       const tokenURI = await serverNftRepository.uploadToIPFS(metadata);
       
       // Return the tokenURI for the client to use for minting

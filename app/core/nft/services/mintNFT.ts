@@ -1,7 +1,12 @@
 import { NFTMetadata } from '../entities/NFTMetadata';
-import { NFTRepository } from '../ports/NFTRepository';
+import { IPFSRepository, MintRepository } from '../ports/NFTRepository';
 
-export async function mintNFT(userAddress: string, metadata: NFTMetadata, repo: NFTRepository) {
-  const tokenURI = await repo.uploadToIPFS(metadata);
-  await repo.mint(userAddress, tokenURI);
+export async function mintNFT(
+  userAddress: string,
+  metadata: NFTMetadata,
+  ipfsRepository: IPFSRepository,
+  mintRepository: MintRepository
+) {
+  const tokenURI = await ipfsRepository.uploadToIPFS(metadata);
+  await mintRepository.mint(userAddress, tokenURI);
 }

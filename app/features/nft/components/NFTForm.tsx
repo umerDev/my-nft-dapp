@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { mintRepository } from '@/adapters/nft/web3/nftContract';
 
 export const NFTForm = () => {
   const [name, setName] = useState('');
@@ -91,6 +92,8 @@ export const NFTForm = () => {
       const result = await uploadToIPFS(file!, name, description, address);
       
       // Step 2: Mint the NFT on the blockchain using the tokenURI
+      // We can either use the mintRepository directly or use the Wagmi hooks
+      // Using Wagmi hooks gives us better UI feedback and transaction handling
       writeContract({
         address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`,
         abi: [
@@ -108,6 +111,14 @@ export const NFTForm = () => {
         functionName: 'mintNFT',
         args: [address as `0x${string}`, result.tokenURI],
       });
+      
+      // Alternative approach using the repository directly:
+      // try {
+      //   await mintRepository.mint(address, result.tokenURI);
+      // } catch (error) {
+      //   console.error('Error minting:', error);
+      //   throw error;
+      // }
       
       setSuccess(`Metadata uploaded to IPFS. Minting transaction initiated...`);
     } catch (err) {
