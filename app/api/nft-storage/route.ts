@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
-import { NFTStorage } from 'nft.storage';
+import pinataSDK from '@pinata/sdk';
+import { writeFile, unlink } from 'fs/promises';
+import { createReadStream } from 'fs';
+import path from 'path';
+import os from 'os';
+import crypto from 'crypto';
 
-const client = new NFTStorage({ token: process.env.NFT_STORAGE_KEY || '' });
+const pinata = new pinataSDK(process.env.PINATA_API_KEY!, process.env.PINATA_SECRET_API_KEY!);
 
 export async function POST(request: Request) {
   try {
@@ -14,15 +19,41 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const metadata = await client.store({
-      name,
-      description,
-      image: file,
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Save buffer to temporary file
+    const tempFileName = `upload-${crypto.randomUUID()}`;
+    const tempFilePath = path.join(os.tmpdir(), tempFileName);
+    await writeFile(tempFilePath, buffer);
+
+    const fileStream = createReadStream(tempFilePath);
+
+    const imageResponse = await pinata.pinFileToIPFS(fileStream, {
+      pinataMetadata: {
+        name: file.name,
+      },
     });
 
-    return NextResponse.json({ metadata });
+    // Clean up temp file
+    await unlink(tempFilePath);
+
+    const metadata = {
+      name,
+      description,
+      image: `ipfs://${imageResponse.IpfsHash}`,
+    };
+
+    const metadataResponse = await pinata.pinJSONToIPFS(metadata);
+
+    return NextResponse.json({
+      metadata: {
+        ...metadataResponse,
+        imageHash: imageResponse.IpfsHash,
+      },
+    });
   } catch (error) {
-    console.error('NFT Storage error:', error);
+    console.error('Pinata upload error:', error);
     return NextResponse.json({ error: 'Failed to store NFT' }, { status: 500 });
   }
 }
