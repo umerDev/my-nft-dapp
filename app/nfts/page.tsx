@@ -4,7 +4,7 @@ import NFTCard from '@/features/nft/components/NFTCard';
 
 import { publicClient } from '@/lib/clients';
 import { CONTRACT_ADDRESS } from '@/lib/contracts';
-import MyNFT from '@/artifacts/contracts/MyNFT.sol/MyNFT.sol/MyNFT.json';
+import MyNFT from '@/artifacts/contracts/MyNFT.sol/MyNFT.json';
 import { Hash } from 'viem';
 
 async function fetchNFTs() {
